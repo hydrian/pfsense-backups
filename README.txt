@@ -12,12 +12,12 @@ CONFIGURATION
 	* Edit configuration file
 
 		- Required Parameters - 
-		PFSHOSTNAME='{pfSense IP/Hostname}'
-		PFSUSER='{pfSense webConfigurator username}'
-		PFSPASS='{pfSense webConfigurator password}'
+		PFSHOSTNAME={pfSense IP/Hostname}
+		PFSUSER={pfSense webConfigurator username}
+		PFSPASS={pfSense webConfigurator password}
 
 		- Optional parameters -
-		BACKUPDIR='{directory to store backups}'
+		BACKUPDIR={directory to store backups}
 
 PARAMETERS
 	-c {FILE}   Location of configuration file
