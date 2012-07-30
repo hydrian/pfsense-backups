@@ -1,0 +1,41 @@
+#summary How to Install and configure pfsense2-backup
+#labels Featured
+
+== Description==
+
+Add your content here.
+
+== REQUIREMESTS ==
+  * bash
+  * perl with URI::Escape module
+
+== INSTALLATION ==
+  # Place pfsense2-backup.sh in program directory. i.e. /usr/local/bin or /opt/bin
+  # Make sure pfsense2-backup.sh is executable
+  # Copy to pfsense2-backup.example.conf to configuration location (default: /etc/pfsense2-backup.conf)
+  # *MAKE SURE PERMISSIONS OF pfsense2-backup.conf ARE SECURE.*
+{{{
+chmod 0600 ${CONFIG_FILE}
+}}}
+	
+== CONFIGURATION ==
+  * Edit configuration file
+    * - Required Parameters - 
+      * PFSHOSTNAME='{pfSense IP/Hostname}'
+      * PFSUSER='{pfSense webConfigurator username}'
+      * PFSPASS='{pfSense webConfigurator password}'
+    * - Optional parameters -
+      * BACKUPDIR='{directory to store backups}' (Default: /var/backups/pfsense)
+
+== PARAMETERS ==
+||-c||{FILE}   Location of configuration file||
+||-o||Outputs generated backup file to STDOUT on completion. This is useful for passing off to other scripts||
+
+== USAGE ==
+  * To run: pfsense2-backup.sh -c ${CONFIGFILE}
+  * Example: pfsense2-backup.sh -c /etc/pfsense2-backup.conf
+
+== Other info == 
+pfsense2-backup.sh generates files named  _pfsense-${hostname}-${date}.xml_ with in the defined BACKUPDIR directory in the configuration file. 
+
+  
