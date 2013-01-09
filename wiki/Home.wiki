@@ -26,6 +26,8 @@ chmod 0600 ${CONFIG_FILE}
       * PFSPASS='{pfSense webConfigurator password}'
     * - Optional parameters -
       * BACKUPDIR='{directory to store backups}' (Default: /var/backups/pfsense)
+      * BACKUPRRD=true/false (Default: false)
+      * ENCRYPTPASS='Encryption passphrase' (Default: disabled)
 
 == PARAMETERS ==
 ||-c||{FILE}   Location of configuration file||
