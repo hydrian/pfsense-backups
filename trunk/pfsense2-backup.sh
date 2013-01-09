@@ -1,4 +1,7 @@
 #!/bin/bash 
+### Build: $Revision$
+### Updated: $Date$
+
 APPNAME=$(basename ${0}) 
 ## DEFAULTS
 DEFCONFIG='/etc/pfsense2-backup.conf'
