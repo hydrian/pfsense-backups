@@ -1,10 +1,13 @@
 #!/bin/bash 
-
 APPNAME=$(basename ${0}) 
+## DEFAULTS
+DEFCONFIG='/etc/pfsense2-backup.conf'
+DEFBACKUPDIR='/var/backups/pfsense'
+
 
 function display_help {
 	echo "SYNTAX: ${APPNAME} -c {CONFIGFILE}"
-	echo "  -c     :Location of configuration file (Default: /etc/pfsense-backup.conf)"
+	echo "  -c     :Location of configuration file (Default: $DEFCONFIG)"
 	echo "  -o     :Output generated file name to STDOUT"
 }
 
@@ -43,7 +46,7 @@ while getopts ":c:o" opt ; do
 done
 
 
-PFSCONFIG=${CLICONF:-/etc/pfsense2-backup.conf)}
+PFSCONFIG=${CLICONF:-$DEFCONFIG}
 ##PFSUSER=''
 ##PFSPASS=''
 ##PFSHOSTNAME='pfsense'
@@ -63,7 +66,7 @@ else
 fi 
 
 ## Creating backup storage directory 
-BACKUPDIR=${BACKUPDIR:-'/var/backups/pfsense'}
+BACKUPDIR=${BACKUPDIR:-$DEFBACKUPDIR}
 if [ ! -d "${BACKUPDIR}" ] ; then
 	mkdir -p "${BACKUPDIR}"
 	if [ $? -eq 0 ] ; then 
