@@ -18,6 +18,8 @@ CONFIGURATION
 
 		- Optional parameters -
 		BACKUPDIR='{directory to store backups}'
+		BACKUPRRD=true/false (Default: false)
+		ENCRYPTPASS='Encryption passphrase' (Default: disabled)
 
 PARAMETERS
 	-c {FILE}   Location of configuration file
