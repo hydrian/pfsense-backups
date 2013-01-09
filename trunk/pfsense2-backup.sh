@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 APPNAME=$(basename ${0}) 
 
@@ -11,12 +11,12 @@ function display_help {
 function clean_up {
 ## Cleaning up cookie session
 if [ -e ${COOKIEFILE} ] ; then
-	logger user.debug -t "${APPNAME}" -- "Removing cookie file ${COOKIEFILE}" 
+	logger -p user.debug -t "${APPNAME}" -- "Removing cookie file ${COOKIEFILE}" 
 	rm ${COOKIEFILE}
 fi
 
 if [ -e "${TMPAUTHFILE}" ] ; then 
-	logger user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
+	logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
 	rm "${TMPAUTHFILE}"
 fi
 }
@@ -48,6 +48,7 @@ PFSCONFIG=${CLICONF:-/etc/pfsense2-backup.conf)}
 ##PFSPASS=''
 ##PFSHOSTNAME='pfsense'
 ##BACKUPDIR='/var/backups/pfsense'
+##BACKUPRRDDATA=1
 
 COOKIEFILE="$(mktemp)"
 
@@ -108,9 +109,18 @@ else
 	exit 1
 fi
 
+POSTDATA='Submit=download'
+if ! ${BACKUPRRD} ; then 
+	POSTDATA="${POSTDATA}&donotbackuprrd=on"
+fi 
+if [ ! -z "${ENCRYPTPASS}" ] ; then
+	URLENCRYPTPASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${ENCRYPTPASS}")"
+	POSTDATA="${POSTDATA}&encrypt=on&encrypt_password=${URLENCRYPTPASS}&encrypt_passconf=${URLENCRYPTPASS}"
+fi 
+
 ## Getting backup file over HTTPS
 wget --quiet --keep-session-cookies --load-cookies ${COOKIEFILE} \
- --post-data 'Submit=download&donotbackuprrd=yes' "https://${PFSHOSTNAME}/diag_backup.php" \
+ --post-data "${POSTDATA}" "https://${PFSHOSTNAME}/diag_backup.php" \
  --no-check-certificate -O "${BACKUPDIR}/${BACKUPFILE}" 
 BACKUPRES=$?
 if [ ${BACKUPRES} -eq 0 ] ; then 
