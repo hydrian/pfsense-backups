@@ -21,7 +21,7 @@ chmod 0600 ${CONFIG_FILE}
 == CONFIGURATION ==
   * Edit configuration file
     * - Required Parameters - 
-      * PFSHOSTNAME='{pfSense IP/Hostname}'
+      * PFSHOSTNAME='{pfSense IP/Hostname}' You can also define a non-standard port here too.  Ex. pfsensehost:8443
       * PFSUSER='{pfSense webConfigurator username}'
       * PFSPASS='{pfSense webConfigurator password}'
     * - Optional parameters -
