@@ -8,6 +8,7 @@ Add your content here.
 == REQUIREMESTS ==
   * bash
   * perl with URI::Escape module
+  * posix compliant logger execultable
 
 == INSTALLATION ==
   # Place pfsense2-backup.sh in program directory. i.e. /usr/local/bin or /opt/bin
@@ -21,7 +22,8 @@ chmod 0600 ${CONFIG_FILE}
 == CONFIGURATION ==
   * Edit configuration file
     * - Required Parameters - 
-      * PFSHOSTNAME='{pfSense IP/Hostname}' You can also define a non-standard port here too.  Ex. pfsensehost:8443
+      * PFSHOSTNAME='{pfSense IP/Hostname}' 
+        * If you are using a non-standard pfSense webConfigurator port, you can enter it here. Ex.  PFHOSTNAME='MyPFSenseBox:8443'
       * PFSUSER='{pfSense webConfigurator username}'
       * PFSPASS='{pfSense webConfigurator password}'
     * - Optional parameters -
