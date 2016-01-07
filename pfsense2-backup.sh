@@ -116,7 +116,7 @@ else
 	exit 1
 fi
 
-POSTDATA="Submit=download&&__csrf_magic=${CSRF2}"
+POSTDATA="Submit=download&__csrf_magic=${CSRF2}"
 if ! ${BACKUPRRD} ; then 
 	POSTDATA="${POSTDATA}&donotbackuprrd=on"
 fi 
@@ -134,7 +134,7 @@ if [ ${BACKUPRES} -eq 0 ] ; then
 	logger -p user.debug -t "${APPNAME}" -- "Successfully downloaded pfSense (${PFSHOSTNAME}) config file."
 else 
 	clean_up
-	logger -p user.error -s -t "${APPNAME}" -- "Failed to download pfSense( ${PFSHOSTNAME}) config file."
+	logger -p user.error -s -t "${APPNAME}" -- "Failed to download pfSense (${PFSHOSTNAME}) config file."
 	exit 1
 fi
 	
