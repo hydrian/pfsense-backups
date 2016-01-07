@@ -21,10 +21,6 @@ if [ -e ${COOKIEFILE} ] ; then
 	rm ${COOKIEFILE}
 fi
 
-if [ -e "${TMPAUTHFILE}" ] ; then 
-	logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
-	rm "${TMPAUTHFILE}"
-fi
 }
 
 while getopts ":c:o" opt ; do 
@@ -91,31 +87,36 @@ fi
 
 
 ## Create secure empty file
-BACKUPFILE="pfsense-${PFSHOSTNAME}-`date +%Y%m%d%H%M%S`.xml"
+BACKUPFILE="pfsense-`echo ${PFSHOSTNAME} | sed -e "s/[^/]*\/\/\([^@]*@\)\?\([^:/]*\).*/\2/"`-`date +%Y%m%d%H%M%S`.xml"
 touch "${BACKUPDIR}/${BACKUPFILE}"
 chmod 600 "${BACKUPDIR}/${BACKUPFILE}"
-
 
 ## Logging in to web interface
 URLUSER="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSUSER}")"
 URLPASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSPASS}")"
-TMPAUTHFILE="$(mktemp)"
-echo -n "login=Login&usernamefld=${URLUSER}&passwordfld=${URLPASS}" > ${TMPAUTHFILE}
+AUTHDATA="login=Login&usernamefld=${URLUSER}&passwordfld=${URLPASS}"
 
-wget -qO/dev/null --keep-session-cookies --save-cookies ${COOKIEFILE} \
- --post-file "${TMPAUTHFILE}" \
- --no-check-certificate "https://${PFSHOSTNAME}/diag_backup.php" 1> /dev/null
+# As per https://doc.pfsense.org/index.php/Remote_Config_Backup#2.2.6_and_Later get CSRF first
+CSRF1=$(wget -qO- --keep-session-cookies --save-cookies ${COOKIEFILE} \
+  --no-check-certificate "${PFSHOSTNAME}/diag_backup.php" \
+    | grep "name='__csrf_magic'" | sed 's/.*value="\(.*\)".*/\1/')
+
+CSRF2=$(wget -qO- --keep-session-cookies --load-cookies ${COOKIEFILE} \
+  --save-cookies ${COOKIEFILE} --no-check-certificate \
+    --post-data "${AUTHDATA}&__csrf_magic=${CSRF1}" \
+      "${PFSHOSTNAME}/diag_backup.php" | grep "name='__csrf_magic'" \
+        | sed 's/.*value="\(.*\)".*/\1/')
+
 LOGINRES=$?
-rm "${TMPAUTHFILE}"
 if [ ${LOGINRES} -eq 0 ] ; then 
-	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense(${PFSHOSTNAME})"
+	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense (${PFSHOSTNAME})"
 else 
-	logger -p user.error -s -t "${APPNAME}" -- "Failed to logged in to pfSense(${PFSHOSTNAME})"
+	logger -p user.error -s -t "${APPNAME}" -- "Failed to login to pfSense (${PFSHOSTNAME})"
 	clean_up
 	exit 1
 fi
 
-POSTDATA='Submit=download'
+POSTDATA="Submit=download&&__csrf_magic=${CSRF2}"
 if ! ${BACKUPRRD} ; then 
 	POSTDATA="${POSTDATA}&donotbackuprrd=on"
 fi 
@@ -126,14 +127,14 @@ fi
 
 ## Getting backup file over HTTPS
 wget --quiet --keep-session-cookies --load-cookies ${COOKIEFILE} \
- --post-data "${POSTDATA}" "https://${PFSHOSTNAME}/diag_backup.php" \
+ --post-data "${POSTDATA}" "${PFSHOSTNAME}/diag_backup.php" \
  --no-check-certificate -O "${BACKUPDIR}/${BACKUPFILE}" 
 BACKUPRES=$?
 if [ ${BACKUPRES} -eq 0 ] ; then 
-	logger -p user.debug -t "${APPNAME}" -- "Successfully downloaded pfSense(${PFSHOSTNAME}) config file."
+	logger -p user.debug -t "${APPNAME}" -- "Successfully downloaded pfSense (${PFSHOSTNAME}) config file."
 else 
 	clean_up
-	logger -p user.error -s -t "${APPNAME}" -- "Failed to download pfSense(${PFSHOSTNAME}) config file."
+	logger -p user.error -s -t "${APPNAME}" -- "Failed to download pfSense( ${PFSHOSTNAME}) config file."
 	exit 1
 fi
 	
