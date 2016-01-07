@@ -13,9 +13,9 @@ CONFIGURATION
 	* Edit configuration file
 
 		- Required Parameters - 
-		PFSHOSTNAME='{pfSense IP/Hostname:pfSenseWebConfPort}'
+		PFSHOSTNAME='{pfSense URL}'
 		If you are using a non-standard pfSense admin webConfigurator port, you can enter it here.
-		Ex.  PFHOSTNAME='MyPFSenseBox:8443'
+		Ex.  PFHOSTNAME='https://MyPFSenseBox:8443'
 
 		PFSUSER='{pfSense webConfigurator username}'
 
