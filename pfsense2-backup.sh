@@ -146,12 +146,12 @@ COOKIEFILE="$(mktemp)"
 ## Get Login page
 PAGE_OUTPUT=$(mktemp)
 logger -p user.debug -t "${APPNAME}" -- "Getting login page..."
-wget \
+WGET_OUT=$(wget \
   --keep-session-cookies \
   --save-cookies "${COOKIEFILE}" \
   ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
   -O "${PAGE_OUTPUT}" \
-  "https://${PFSHOSTNAME}/" 
+  "https://${PFSHOSTNAME}/" 2>&1) 
 HTTP_CALL_RET=$?
 if [ ${HTTP_CALL_RET} -eq 5  ] ; then
 	logger -s -p user.error -t "${APPNAME}" -- "SSL Verification failed"
@@ -183,14 +183,14 @@ echo -n "login=Login&usernamefld=${URL_USER}&passwordfld=${URL_PASS}&__csrf_magi
 
 PAGE_OUTPUT=$(mktemp)
 logger -p user.debug -t "${APPNAME}" -- "Submitting login credentials"
-wget \
+WGET_OUT=$(wget \
   --keep-session-cookies \
   --load-cookies ${COOKIEFILE} \
   --save-cookies ${COOKIEFILE} \
   ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
   -O "${PAGE_OUTPUT}" \
   --post-file "${TMPAUTHFILE}" \
-  https://${PFSHOSTNAME}/index.php 1>/dev/null
+  https://${PFSHOSTNAME}/index.php 2>&1  )
 LOGIN_RES=$?
 ${DEBUG,,} || rm "${TMPAUTHFILE}"
 if [ ${LOGIN_RES} -eq 0 ] ; then 
@@ -234,7 +234,7 @@ fi
 
 ### Writing POST DATA to file
 POSTDATA_FILE=$(mktemp)
-echo "${POSTDATA}" | tee  ${POSTDATA_FILE} 
+echo "${POSTDATA}" | tee  ${POSTDATA_FILE}  1>/dev/null
 if [ $? -ne 0 ] ; then
 	logger -p user.error -s -t "${APPNAME}" -- "Failed to write POST data to temp file"
 	exit 2
@@ -242,14 +242,14 @@ fi
 
 ## Getting backup file over HTTPS
 
-wget \
+WGET_OUT=$(wget \
   --keep-session-cookies \
   --load-cookies ${COOKIEFILE} \
   --save-cookies ${COOKIEFILE} \
   ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
   -O "${BACKUPDIR}/${BACKUPFILE}" \
   --post-file="${POSTDATA_FILE}" \
-  "https://${PFSHOSTNAME}/diag_backup.php" 
+  "https://${PFSHOSTNAME}/diag_backup.php" 2>&1) 
 
 BACKUPRES=$?
 rm "${POSTDATA_FILE}"
