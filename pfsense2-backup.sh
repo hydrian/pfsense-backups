@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash -x
 ### Build: $Revision$
 ### Updated: $Date$
 
@@ -6,7 +6,8 @@ APPNAME=$(basename ${0})
 ## DEFAULTS
 DEFCONFIG='/etc/pfsense2-backup.conf'
 DEFBACKUPDIR='/var/backups/pfsense'
-
+DEFAULT_SAVE_PACKAGE=true
+DEFAULT_IGNORE_UNTRUSTED_CERTIFICATES=false
 
 function display_help {
 	echo "SYNTAX: ${APPNAME} -c {CONFIGFILE}"
@@ -21,10 +22,39 @@ if [ -e ${COOKIEFILE} ] ; then
 	rm ${COOKIEFILE}
 fi
 
+if [ ! -z "${TMP_POSTDATA_FILE}" ] && [ -e "${TMP_POSTDATA_FILE}" ]; then
+	logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file ${TMP_POSTDATA_FILE}"
+	rm "${TMP_POSTDATA_FILE}"
+fi
+	
+
 if [ -e "${TMPAUTHFILE}" ] ; then 
 	logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
 	rm "${TMPAUTHFILE}"
 fi
+return 0
+}
+
+
+function get_csrf {
+	local PAGE_FILE="${1}"
+	local CSRF_VALUE=""
+	if [  ! -r "${PAGE_FILE}" ] ; then
+		echo "Could not read ${PAGE_FILE}" 1>&2
+		return 2
+	fi 
+	CSRF_GREP=$(grep 'var csrfMagicToken = "' "${PAGE_FILE}") 
+	if [ $? -ne 0 ] ; then
+		echo "Failed to get grep CSRF out of HTML file." 1>&2
+		return 3
+	fi
+	CSRF_VALUE=$(echo "${CSRF_GREP}"|sed -r 's/.*(sid\:[0-9a-f]+,[[:digit:]]+).*/\1/' )
+	if [ $? -ne 0 ] ; then
+		echo "Failed to parse CSRF out of grep statement" 1>&2
+		return 4
+	fi
+	echo "${CSRF_VALUE}"
+	return 0
 }
 
 while getopts ":c:o" opt ; do 
@@ -68,6 +98,8 @@ else
 	exit 1
 fi 
 
+IGNORE_UNTRUSTED_CERTIFICATES="${IGNORE_UNTRUSTED_CERTIFICATES:-$DEFAULT_IGNORE_UNTRUSTED_CERTIFICATES}"
+
 ## Creating backup storage directory 
 BACKUPDIR=${BACKUPDIR:-$DEFBACKUPDIR}
 if [ ! -d "${BACKUPDIR}" ] ; then
@@ -95,40 +127,124 @@ BACKUPFILE="pfsense-${PFSHOSTNAME}-`date +%Y%m%d%H%M%S`.xml"
 touch "${BACKUPDIR}/${BACKUPFILE}"
 chmod 600 "${BACKUPDIR}/${BACKUPFILE}"
 
+if [ "${IGNORE_UNTRUSTED_CERTIFICATES,,}" == "true" ] ; then
+	IGNORE_UNTRUSTED_CERTIFICAT_SET='--no-check-certificate'
+else 
+	IGNORE_UNTRUSTED_CERTIFICAT_SET=''	 
+fi
 
-## Logging in to web interface
-URLUSER="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSUSER}")"
-URLPASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSPASS}")"
+## Get Login page
+PAGE_OUTPUT=$(mktemp)
+logger -p user.debug -t "${APPNAME}" -- "Getting login page..."
+wget \
+  --keep-session-cookies \
+  --save-cookies "${COOKIEFILE}" \
+  "${IGNORE_UNTRUSTED_CERTIFICAT_SET}" \
+  -O "${PAGE_OUTPUT}" \
+  "https://${PFSHOSTNAME}/" 
+HTTP_CALL_RET=$?
+if [ ${HTTP_CALL_RET} -eq 5  ] ; then
+	logger -s -p user.error -t "${APPNAME}" -- "SSL Verification failed"
+	clean_up 
+	exit 2
+elif [ ${HTTP_CALL_RET} -ne 0 ] ; then
+	logger -s -p user.error -t "${APPNAME}" -- "Failed to login page" 
+	clean_up
+	exit 2
+fi
+
+CSRF=$(get_csrf "${PAGE_OUTPUT}")
+CSRF_RET=$?
+${DEBUG,,} || rm "${PAGE_OUTPUT}"
+if [ ${CSRF_RET} -ne 0 ] ; then
+	logger -p user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
+	clean_up
+	exit 2
+fi
+
+
+## Submitting Login in to web interface
+URL_USER="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSUSER}")"
+URL_PASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSPASS}")"
+URL_CSRF="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${CSRF}")"
+
 TMPAUTHFILE="$(mktemp)"
-echo -n "login=Login&usernamefld=${URLUSER}&passwordfld=${URLPASS}" > ${TMPAUTHFILE}
+echo -n "login=Login&usernamefld=${URL_USER}&passwordfld=${URL_PASS}&__csrf_magic=${URL_CSRF}" > ${TMPAUTHFILE}
 
-wget -qO/dev/null --keep-session-cookies --save-cookies ${COOKIEFILE} \
- --post-file "${TMPAUTHFILE}" \
- --no-check-certificate "https://${PFSHOSTNAME}/diag_backup.php" 1> /dev/null
-LOGINRES=$?
+PAGE_OUTPUT=$(mktemp)
+logger -p user.debug -t "${APPNAME}" -- "Submitting login credentials"
+wget \
+  --keep-session-cookies \
+  --load-cookies ${COOKIEFILE} \
+  --save-cookies ${COOKIEFILE} \
+  ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
+  -O "${PAGE_OUTPUT}" \
+  --post-file "${TMPAUTHFILE}" \
+  https://${PFSHOSTNAME}/index.php 1>/dev/null
+LOGIN_RES=$?
 rm "${TMPAUTHFILE}"
-if [ ${LOGINRES} -eq 0 ] ; then 
+if [ ${LOGIN_RES} -eq 0 ] ; then 
 	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense(${PFSHOSTNAME})"
 else 
 	logger -p user.error -s -t "${APPNAME}" -- "Failed to logged in to pfSense(${PFSHOSTNAME})"
 	clean_up
 	exit 1
 fi
+#read test
+CSRF=$(get_csrf ${PAGE_OUTPUT})
+CSRF_RET=$?
+rm "${PAGE_OUTPUT}"
+if [ $CSRF_RET -ne 0 ] ; then
+	logger -p user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
+	clean_up
+	exit 2
+fi
 
-POSTDATA='Submit=download'
-if ! ${BACKUPRRD} ; then 
+##########################
+### Downloading the Config
+##########################
+DOWNLOAD_VALUE="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "Download configuration as XML")"
+POSTDATA="download=${DOWNLOAD_VALUE}"
+URL_CSRF="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${CSRF}")"
+POSTDATA="${POSTDATA}&__csrf_magic=${URL_CSRF}"
+if [ "${BACKUPRRD,,}" == "true" ] ; then
+	logger -p user.debug -t "${APPNAME}" -- "Enabled RRD backups" 
 	POSTDATA="${POSTDATA}&donotbackuprrd=on"
 fi 
 if [ ! -z "${ENCRYPTPASS}" ] ; then
+	logger -p user.debug -t "${APPNAME}" -- "Encrypting backup"
 	URLENCRYPTPASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${ENCRYPTPASS}")"
-	POSTDATA="${POSTDATA}&encrypt=on&encrypt_password=${URLENCRYPTPASS}&encrypt_passconf=${URLENCRYPTPASS}"
-fi 
+	POSTDATA="${POSTDATA}&encrypt=on&encrypt_password=${URLENCRYPTPASS}&encrypt_passconf=${URLENCRYPTPASS}&"
+fi
+if [ "${BACKUP_PACKAGES,,}" == "true" ] ;then 
+	logger -p user.debug -t "${APPNAME}" -- "Not backing up packages"
+	POSTDATA="${POSTDATA}&nopackages=yes"
+fi
+
+POSTDATA_FILE=$(mktemp)
+echo "${POSTDATA}" > "${POSTDATA_FILE}"
+
+### Writing POST DATA to file
+TMP_POSTDATA_FILE=$(mktemp)
+echo "${POSTDATA}" | tee  ${TMP_POSTDATA_FILE} 
+if [ $? -ne 0 ] ; then
+	logger -p user.error -s -t "${APPNAME}" -- "Failed to write POST data to temp file"
+	exit 2
+fi   
 
 ## Getting backup file over HTTPS
-wget --quiet --keep-session-cookies --load-cookies ${COOKIEFILE} \
- --post-data "${POSTDATA}" "https://${PFSHOSTNAME}/diag_backup.php" \
- --no-check-certificate -O "${BACKUPDIR}/${BACKUPFILE}" 
+
+wget \
+  --keep-session-cookies \
+  --load-cookies ${COOKIEFILE} \
+  --save-cookies ${COOKIEFILE} \
+  ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
+  -O "${BACKUPDIR}/${BACKUPFILE}" \
+  --post-file="${POSTDATA_FILE}" \
+  "https://${PFSHOSTNAME}/diag_backup.php" 
+   
 BACKUPRES=$?
+rm "${POSTDATA_FILE}"
 if [ ${BACKUPRES} -eq 0 ] ; then 
 	logger -p user.debug -t "${APPNAME}" -- "Successfully downloaded pfSense(${PFSHOSTNAME}) config file."
 else 
