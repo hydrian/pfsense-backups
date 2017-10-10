@@ -4,15 +4,18 @@
 
 APPNAME=$(basename ${0}) 
 ## DEFAULTS
-DEFCONFIG='/etc/pfsense2-backup.conf'
-DEFBACKUPDIR='/var/backups/pfsense'
+DEFAULT_CONFIG_FILE='/etc/pfsense2-backup.conf'
+DEFAULT_BACKUPDIR='/var/backups/pfsense'
 DEFAULT_SAVE_PACKAGE=true
 DEFAULT_IGNORE_UNTRUSTED_CERTIFICATES=false
+DEFAULT_DEBUG=false
+DEFAULT_BACKUP_RRD=false
 
 function display_help {
 	echo "SYNTAX: ${APPNAME} -c {CONFIGFILE}"
 	echo "  -c     :Location of configuration file (Default: $DEFCONFIG)"
 	echo "  -o     :Output generated file name to STDOUT"
+	echo "  --help :Outputs these help messages"
 }
 
 function clean_up {
@@ -71,6 +74,10 @@ while getopts ":c:o" opt ; do
 		'o')
 			OUTPUTFILENAME=true
 		;;
+		'--help' )
+			display_help
+			exit 0
+		;;
 		\?)
 			logger -p user.error -s -t "${APPNAME}" -- "Invalid switch -${OPTARG}"
 			display_help 1>&2
@@ -85,13 +92,7 @@ while getopts ":c:o" opt ; do
 done
 
 
-PFSCONFIG=${CLICONF:-$DEFCONFIG}
-##PFSUSER=''
-##PFSPASS=''
-##PFSHOSTNAME='pfsense'
-##BACKUPDIR='/var/backups/pfsense'
-##BACKUPRRDDATA=1
-
+PFSCONFIG=${CLICONF:-$DEFAULT_CONFIG_FILE}
 
 
 ## Loading config file
@@ -100,14 +101,17 @@ if [ -e "${PFSCONFIG}" ] ; then
 else 
 	logger -p user.error -s -t ${APPNAME} -- "Could not load config file ${PFSCONFIG}"
 	clean_up
-	display_help
+	display_help 1>&2
 	exit 1
 fi 
 
+### Assign unset defaults
+BACKUPRRD="${BACKUPRRD:-$DEFAULT_BACKUP_RRD}"
 IGNORE_UNTRUSTED_CERTIFICATES="${IGNORE_UNTRUSTED_CERTIFICATES:-$DEFAULT_IGNORE_UNTRUSTED_CERTIFICATES}"
+DEBUG="${DEBUG:-$DEFAULT_DEBUG}"
 
 ## Creating backup storage directory 
-BACKUPDIR=${BACKUPDIR:-$DEFBACKUPDIR}
+BACKUPDIR=${BACKUPDIR:-$DEFAULT_BACKUPDIR}
 if [ ! -d "${BACKUPDIR}" ] ; then
 	mkdir -p "${BACKUPDIR}"
 	if [ $? -eq 0 ] ; then 
