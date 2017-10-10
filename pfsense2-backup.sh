@@ -19,23 +19,23 @@ function clean_up {
 ## Cleaning up cookie session
 	if [ -e ${COOKIEFILE} ] ; then
 		logger -p user.debug -t "${APPNAME}" -- "Removing cookie file ${COOKIEFILE}" 
-		rm ${COOKIEFILE}
+		${DEBUG,,} || rm ${COOKIEFILE}
 	fi
 	
 	if [ ! -z "${TMP_POSTDATA_FILE}" ] && [ -e "${TMP_POSTDATA_FILE}" ]; then
 		logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file ${TMP_POSTDATA_FILE}"
-		rm "${TMP_POSTDATA_FILE}"
+		${DEBUG,,} || rm "${TMP_POSTDATA_FILE}"
 	fi
 		
 	
 	if [ -e "${TMPAUTHFILE}" ] ; then 
 		logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
-		rm "${TMPAUTHFILE}"
+		${DEBUG,,} || rm "${TMPAUTHFILE}"
 	fi
 	
 	if [ -e "${PAGE_FILE}" ] ; then
 		logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file ${PAGE_FILE}"
-		rm "${PAGE_FILE}"
+		${DEBUG,,} || rm "${PAGE_FILE}"
 	fi
 }
 
@@ -92,7 +92,7 @@ PFSCONFIG=${CLICONF:-$DEFCONFIG}
 ##BACKUPDIR='/var/backups/pfsense'
 ##BACKUPRRDDATA=1
 
-COOKIEFILE="$(mktemp)"
+
 
 ## Loading config file
 if [ -e "${PFSCONFIG}" ] ; then 
@@ -139,43 +139,8 @@ else
 	IGNORE_UNTRUSTED_CERTIFICAT_SET=''	 
 fi
 
-## Get Login page
-PAGE_OUTPUT=$(mktemp)
-logger -p user.debug -t "${APPNAME}" -- "Getting login page..."
-wget \
-  --keep-session-cookies \
-  --save-cookies "${COOKIEFILE}" \
-  "${IGNORE_UNTRUSTED_CERTIFICAT_SET}" \
-  -O "${PAGE_OUTPUT}" \
-  "https://${PFSHOSTNAME}/"  1>/dev/null 2>&1 
-HTTP_CALL_RET=$?
-if [ ${HTTP_CALL_RET} -eq 5  ] ; then
-	logger -p user.error -t "${APPNAME}" -- "SSL Verification failed"
-	clean_up 
-	exit 2
-elif [ ${HTTP_CALL_RET} -ne 0 ] ; then
-	logger -p user.error -t "${APPNAME}" -- "Failed to login page" 
-	clean_up
-	exit 2
-fi
-
-CSRF=$(get_csrf ${PAGE_OUTPUT})
-CSRF_RET=?
-rm "${PAGE_OUTPUT}"
-if [ $LOGIN_CSRF_RET -ne 0 ] ; then
-	logger -user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
-	clean_up
-	exit 2
-fi
-
-
-## Submitting Login in to web interface
-URLUSER="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSUSER}")"
-URLPASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${PFSPASS}")"
-URL_CSRF="$(perl -MURI::Escape -e 'print url_escape($ARGV[0]);' "${CSRF")"
-
-TMPAUTHFILE="$(mktemp)"
-echo -n "login=Login&usernamefld=${URLUSER}&passwordfld=${URLPASS}&__csrf_magic=${URL_CSRF}" > ${TMPAUTHFILE}
+### Cookie Storage
+COOKIEFILE="$(mktemp)"
 
 
 ## Get Login page
@@ -184,7 +149,7 @@ logger -p user.debug -t "${APPNAME}" -- "Getting login page..."
 wget \
   --keep-session-cookies \
   --save-cookies "${COOKIEFILE}" \
-  "${IGNORE_UNTRUSTED_CERTIFICAT_SET}" \
+  ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
   -O "${PAGE_OUTPUT}" \
   "https://${PFSHOSTNAME}/" 
 HTTP_CALL_RET=$?
@@ -202,7 +167,7 @@ CSRF=$(get_csrf "${PAGE_OUTPUT}")
 CSRF_RET=$?
 ${DEBUG,,} || rm "${PAGE_OUTPUT}"
 if [ ${CSRF_RET} -ne 0 ] ; then
-	logger -p user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
+	logger -s -p user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
 	clean_up
 	exit 2
 fi
@@ -227,7 +192,7 @@ wget \
   --post-file "${TMPAUTHFILE}" \
   https://${PFSHOSTNAME}/index.php 1>/dev/null
 LOGIN_RES=$?
-rm "${TMPAUTHFILE}"
+${DEBUG,,} || rm "${TMPAUTHFILE}"
 if [ ${LOGIN_RES} -eq 0 ] ; then 
 	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense(${PFSHOSTNAME})"
 else 
@@ -241,15 +206,6 @@ CSRF_RET=$?
 rm "${PAGE_OUTPUT}"
 if [ $CSRF_RET -ne 0 ] ; then
 	logger -p user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
-	clean_up
-	exit 2
-fi
-
-CSRF=$(get_csrf ${PAGE_OUTPUT})
-CSRF_RET=?
-rm "${PAGE_OUTPUT}"
-if [ $LOGIN_CSRF_RET -ne 0 ] ; then
-	logger -user.error -t "${APPNAME}" --  "Failed to get CSRF. Aborting." 
 	clean_up
 	exit 2
 fi
@@ -295,7 +251,6 @@ wget \
   --post-file="${POSTDATA_FILE}" \
   "https://${PFSHOSTNAME}/diag_backup.php" 
 
-   
 BACKUPRES=$?
 rm "${POSTDATA_FILE}"
 if [ ${BACKUPRES} -eq 0 ] ; then 
