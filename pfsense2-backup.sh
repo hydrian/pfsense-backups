@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 ### Build: $Revision$
 ### Updated: $Date$
 
@@ -17,21 +17,26 @@ function display_help {
 
 function clean_up {
 ## Cleaning up cookie session
-if [ -e ${COOKIEFILE} ] ; then
-	logger -p user.debug -t "${APPNAME}" -- "Removing cookie file ${COOKIEFILE}" 
-	rm ${COOKIEFILE}
-fi
-
-if [ ! -z "${TMP_POSTDATA_FILE}" ] && [ -e "${TMP_POSTDATA_FILE}" ]; then
-	logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file ${TMP_POSTDATA_FILE}"
-	rm "${TMP_POSTDATA_FILE}"
-fi
+	if [ -e ${COOKIEFILE} ] ; then
+		logger -p user.debug -t "${APPNAME}" -- "Removing cookie file ${COOKIEFILE}" 
+		rm ${COOKIEFILE}
+	fi
 	
-
-if [ -e "${TMPAUTHFILE}" ] ; then 
-	logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
-	rm "${TMPAUTHFILE}"
-fi
+	if [ ! -z "${TMP_POSTDATA_FILE}" ] && [ -e "${TMP_POSTDATA_FILE}" ]; then
+		logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file ${TMP_POSTDATA_FILE}"
+		rm "${TMP_POSTDATA_FILE}"
+	fi
+		
+	
+	if [ -e "${TMPAUTHFILE}" ] ; then 
+		logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file  ${TMPAUTHFILE}" 
+		rm "${TMPAUTHFILE}"
+	fi
+	
+	if [ -e "${PAGE_FILE}" ] ; then
+		logger -p user.debug -t "${APPNAME}" -- "Removing sensitive file ${PAGE_FILE}"
+		rm "${PAGE_FILE}"
+	fi
 }
 
 
@@ -135,7 +140,7 @@ wget \
   --save-cookies "${COOKIEFILE}" \
   "${IGNORE_UNTRUSTED_CERTIFICAT_SET}" \
   -O "${PAGE_OUTPUT}" \
-  "https://${PFSHOSTNAME}/" 1>/dev/null
+  "https://${PFSHOSTNAME}/"  1>/dev/null 2>&1 
 HTTP_CALL_RET=$?
 if [ ${HTTP_CALL_RET} -eq 5  ] ; then
 	logger -p user.error -t "${APPNAME}" -- "SSL Verification failed"
@@ -174,7 +179,7 @@ wget \
   "${IGNORE_UNTRUSTED_CERTIFICAT_SET}" \
   -O "${PAGE_OUTPUT}" \
   --post-file "${TMPAUTHFILE}" \
-  "https://${PFSHOSTNAME}/index.php" 1> /dev/null
+  "https://${PFSHOSTNAME}/index.php" 2>&1 1>/dev/null 
 LOGINRES=$?
 rm "${TMPAUTHFILE}"
 if [ ${LOGINRES} -ne 0 ] ; then 
@@ -226,7 +231,7 @@ wget
   "${IGNORE_UNTRUSTED_CERTIFICAT_SET}" \
   -O "${BACKUPDIR}/${BACKUPFILE}" \
   --post-data "${POSTDATA}" \
-  "https://${PFSHOSTNAME}/diag_backup.php" 
+  "https://${PFSHOSTNAME}/diag_backup.php" 2>&1 1>/dev/null 
    
 BACKUPRES=$?
 if [ ${BACKUPRES} -eq 0 ] ; then 
