@@ -23,15 +23,18 @@ CONFIGURATION
 		PFSPASS='{pfSense webConfigurator password}'
 
 		- Optional parameters -
-		BACKUPDIR='{directory to store backups}' (Default: /var/backups/pfsense)
+		BACKUPDIR='{directory to store backups}' (Default: /var/backups/pfense)
 		BACKUPRRD=true/false (Default: false)
 		ENCRYPTPASS='Encryption passphrase' (Default: disabled)
 		DEBUG=true/false (Default: false)
+			DO NOT ENABLE THIS LIGHTLY. THE OPTION CAN LEAVE SENSITIVE DATA IN TEMP FILES LAYING AROUND.
+		
 
 PARAMETERS
 	-c {FILE}   Location of configuration file
 	-o          Outputs generated backup file to STDOUT on completion
 	            This is useful for passing off to other scripts
+	--help      Displays help messages
 
 USAGE
 	To run: pfsense2-backup.sh -c ${CONFIGFILE}
