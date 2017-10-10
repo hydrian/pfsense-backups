@@ -2,6 +2,7 @@ REQUIREMESTS
 	* bash
 	* perl with URI::Escape module
 	* posix compliant logger executable
+	* wget
 
 INSTALLATION
 	1. Place pfsense2-backup.sh in program directory. i.e. /usr/local/bin or /opt/bin
@@ -25,6 +26,7 @@ CONFIGURATION
 		BACKUPDIR='{directory to store backups}' (Default: /var/backups/pfsense)
 		BACKUPRRD=true/false (Default: false)
 		ENCRYPTPASS='Encryption passphrase' (Default: disabled)
+		DEBUG=true/false (Default: false)
 
 PARAMETERS
 	-c {FILE}   Location of configuration file
