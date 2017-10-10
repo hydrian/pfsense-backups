@@ -73,12 +73,12 @@ while getopts ":c:o" opt ; do
 		;;
 		\?)
 			logger -p user.error -s -t "${APPNAME}" -- "Invalid switch -${OPTARG}"
-			display_help
+			display_help 1>&2
 			exit 1
 		;;		
 		\:)
 			logger -p user.error -s -t "${APPNAME}" -- "Invalid switch: -${opt}"
-			display_help
+			display_help 1>&2
 			exit 1
 		;;
 	esac
@@ -158,7 +158,8 @@ if [ ${HTTP_CALL_RET} -eq 5  ] ; then
 	clean_up 
 	exit 2
 elif [ ${HTTP_CALL_RET} -ne 0 ] ; then
-	logger -s -p user.error -t "${APPNAME}" -- "Failed to login page" 
+	logger -s -p user.error -t "${APPNAME}" -- "Failed to login page"
+	echo "${WGET_OUT}"|logger -s -p user.debug -t "${APPNAME}" 
 	clean_up
 	exit 2
 fi
@@ -197,6 +198,7 @@ if [ ${LOGIN_RES} -eq 0 ] ; then
 	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense(${PFSHOSTNAME})"
 else 
 	logger -p user.error -s -t "${APPNAME}" -- "Failed to logged in to pfSense(${PFSHOSTNAME})"
+	echo "${WGET_OUT}"|logger -s -p user.debug -t "${APPNAME}"
 	clean_up
 	exit 1
 fi
@@ -258,6 +260,7 @@ if [ ${BACKUPRES} -eq 0 ] ; then
 else 
 	clean_up
 	logger -p user.error -s -t "${APPNAME}" -- "Failed to download pfSense(${PFSHOSTNAME}) config file."
+	echo "${WGET_OUT}"|logger -s -p user.debug -t "${APPNAME}" 
 	exit 1
 fi
 	
