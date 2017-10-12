@@ -40,4 +40,5 @@ USAGE
 	To run: pfsense2-backup.sh -c ${CONFIGFILE}
 	  Example: pfsense2-backup.sh -c /etc/pfsense2-backup.conf
   
-
+BEST PRACTICES
+	Create a pfSense user that is only authorized to 'Diagnostics: Backup & Restore' permissions
