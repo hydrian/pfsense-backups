@@ -115,7 +115,7 @@ BACKUPDIR=${BACKUPDIR:-$DEFAULT_BACKUPDIR}
 if [ ! -d "${BACKUPDIR}" ] ; then
 	mkdir -p "${BACKUPDIR}"
 	if [ $? -eq 0 ] ; then 
-		logger -p user.notice -s -t ${APPNAME} -- "${APPNAME} created backup directory ${BACKUPDIR}"
+		logger -p user.notice -s -t "${APPNAME}" -- "${APPNAME} created backup directory ${BACKUPDIR}"
 	else
 		clean_up
 		logger -p user.error -s -t "${APPNAME}" -- "Could not create backup storage directory ${BACKUPDIR}"
@@ -223,19 +223,27 @@ DOWNLOAD_VALUE="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "Download 
 POSTDATA="download=${DOWNLOAD_VALUE}"
 URL_CSRF="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${CSRF}")"
 POSTDATA="${POSTDATA}&__csrf_magic=${URL_CSRF}"
-if [ "${BACKUPRRD,,}" == "true" ] ; then
-	logger -p user.debug -t "${APPNAME}" -- "Enabled RRD backups" 
 
+### RRDs
+if [ "${BACKUPRRD,,}" == "true" ] ; then
+	logger -p user.info -t "${APPNAME}" -- "Enabled RRD backups" 
 	POSTDATA="${POSTDATA}&donotbackuprrd=on"
+else 
+	logger -p user.info -t "${APPNAME}" -- "Disabled RRD backups"
 fi 
+### Encryption
 if [ ! -z "${ENCRYPTPASS}" ] ; then
-	logger -p user.debug -t "${APPNAME}" -- "Encrypting backup"
+	logger -p user.info -t "${APPNAME}" -- "Encrypting backup"
 	URLENCRYPTPASS="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${ENCRYPTPASS}")"
 	POSTDATA="${POSTDATA}&encrypt=on&encrypt_password=${URLENCRYPTPASS}&encrypt_passconf=${URLENCRYPTPASS}&"
 fi
+
+### Packages
 if [ "${BACKUP_PACKAGES,,}" == "true" ] ;then 
-	logger -p user.debug -t "${APPNAME}" -- "Not backing up packages"
+	logger -p user.info -t "${APPNAME}" -- "Backing up packages"
 	POSTDATA="${POSTDATA}&nopackages=yes"
+else 
+   logger -p user.info -t "${APPNAME}" -- "Not backing up packages"
 fi
 
 ### Writing POST DATA to file
@@ -270,7 +278,7 @@ fi
 	
 clean_up
 
-logger -p user.info -t "${APPNAME}" -- "Successfully completed backup of ${PFSHOSTNAME}"
+logger -p user.notice -t "${APPNAME}" -- "Successfully completed backup of ${PFSHOSTNAME}"
 OUTPUTFILENAME=${OUTPUTFILENAME:-false}
 if ($OUTPUTFILENAME) ; then 
 	echo "${BACKUPDIR}/${BACKUPFILE}"
