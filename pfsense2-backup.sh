@@ -283,6 +283,7 @@ if [ -z "${ENCRYPTPASS}" ] ; then
                 logger -p user.debug -t "${APPNAME}" -- "Successfully checked downloaded pfSense(${PFSHOSTNAME}) config file."
         else
                 clean_up
+		${DEBUG,,} || rm "${BACKUPDIR}/${BACKUPFILE}"
                 logger -p user.error -s -t "${APPNAME}" -- "Not correct xml pfSense(${PFSHOSTNAME}) config file."
                 exit 1
         fi
