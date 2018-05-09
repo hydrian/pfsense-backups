@@ -275,7 +275,19 @@ else
 	echo "${WGET_OUT}"|logger -s -p user.debug -t "${APPNAME}" 
 	exit 1
 fi
-	
+
+if [ -z "${ENCRYPTPASS}" ] ; then
+        $(head -n1 ${BACKUPDIR}/${BACKUPFILE} | grep -q '<?xml version="1.0"?>')
+        IS_XMLFILE=$?
+        if [ ${IS_XMLFILE} -eq 0 ] ; then
+                logger -p user.debug -t "${APPNAME}" -- "Successfully checked downloaded pfSense(${PFSHOSTNAME}) config file."
+        else
+                clean_up
+                logger -p user.error -s -t "${APPNAME}" -- "Not correct xml pfSense(${PFSHOSTNAME}) config file."
+                exit 1
+        fi
+fi
+
 clean_up
 
 logger -p user.notice -t "${APPNAME}" -- "Successfully completed backup of ${PFSHOSTNAME}"
