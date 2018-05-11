@@ -10,6 +10,7 @@ DEFAULT_SAVE_PACKAGE=true
 DEFAULT_IGNORE_UNTRUSTED_CERTIFICATES=false
 DEFAULT_DEBUG=false
 DEFAULT_BACKUP_RRD=false
+DEFAULT_OVERWRITE_SAVED_CONIFG=false
 
 function display_help {
 	echo "SYNTAX: ${APPNAME} -c {CONFIGFILE}"
@@ -132,8 +133,13 @@ if [ -z "${PFSUSER}" ] || [ -z "${PFSPASS}" ] || [ -z "${PFSHOSTNAME}" ] ; then
 fi
 
 
+OVERWRITE_SAVED_CONIFG=${OVERWRITE_SAVED_CONIFG:-$DEFAULT_OVERWRITE_SAVED_CONIFG}
+if [ "${OVERWRITE_SAVED_CONIFG,,}" == "true" ] ; then
+        BACKUPFILE="pfsense-${PFSHOSTNAME}.xml"
+else
+        BACKUPFILE="pfsense-${PFSHOSTNAME}-`date +%Y%m%d%H%M%S`.xml"
+fi
 ## Create secure empty file
-BACKUPFILE="pfsense-${PFSHOSTNAME}-`date +%Y%m%d%H%M%S`.xml"
 touch "${BACKUPDIR}/${BACKUPFILE}"
 chmod 600 "${BACKUPDIR}/${BACKUPFILE}"
 
