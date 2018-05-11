@@ -226,11 +226,11 @@ POSTDATA="${POSTDATA}&__csrf_magic=${URL_CSRF}"
 
 ### RRDs
 if [ "${BACKUPRRD,,}" == "true" ] ; then
-	logger -p user.info -t "${APPNAME}" -- "Enabled RRD backups" 
-	POSTDATA="${POSTDATA}&donotbackuprrd=on"
-else 
-	logger -p user.info -t "${APPNAME}" -- "Disabled RRD backups"
-fi 
+        logger -p user.info -t "${APPNAME}" -- "Enabled RRD backups"
+else
+        logger -p user.info -t "${APPNAME}" -- "Disabled RRD backups"
+        POSTDATA="${POSTDATA}&donotbackuprrd=yes"
+fi
 ### Encryption
 if [ ! -z "${ENCRYPTPASS}" ] ; then
 	logger -p user.info -t "${APPNAME}" -- "Encrypting backup"
