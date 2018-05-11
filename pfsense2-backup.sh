@@ -10,6 +10,7 @@ DEFAULT_SAVE_PACKAGE=true
 DEFAULT_IGNORE_UNTRUSTED_CERTIFICATES=false
 DEFAULT_DEBUG=false
 DEFAULT_BACKUP_RRD=false
+DEFAULT_OVERWRITE_SAVED_CONIFG=false
 
 function display_help {
 	echo "SYNTAX: ${APPNAME} -c {CONFIGFILE}"
@@ -132,8 +133,13 @@ if [ -z "${PFSUSER}" ] || [ -z "${PFSPASS}" ] || [ -z "${PFSHOSTNAME}" ] ; then
 fi
 
 
+OVERWRITE_SAVED_CONIFG=${OVERWRITE_SAVED_CONIFG:-$DEFAULT_OVERWRITE_SAVED_CONIFG}
+if [ "${OVERWRITE_SAVED_CONIFG,,}" == "true" ] ; then
+        BACKUPFILE="pfsense-${PFSHOSTNAME}.xml"
+else
+        BACKUPFILE="pfsense-${PFSHOSTNAME}-`date +%Y%m%d%H%M%S`.xml"
+fi
 ## Create secure empty file
-BACKUPFILE="pfsense-${PFSHOSTNAME}-`date +%Y%m%d%H%M%S`.xml"
 touch "${BACKUPDIR}/${BACKUPFILE}"
 chmod 600 "${BACKUPDIR}/${BACKUPFILE}"
 
@@ -226,11 +232,11 @@ POSTDATA="${POSTDATA}&__csrf_magic=${URL_CSRF}"
 
 ### RRDs
 if [ "${BACKUPRRD,,}" == "true" ] ; then
-	logger -p user.info -t "${APPNAME}" -- "Enabled RRD backups" 
-	POSTDATA="${POSTDATA}&donotbackuprrd=on"
-else 
-	logger -p user.info -t "${APPNAME}" -- "Disabled RRD backups"
-fi 
+        logger -p user.info -t "${APPNAME}" -- "Enabled RRD backups"
+else
+        logger -p user.info -t "${APPNAME}" -- "Disabled RRD backups"
+        POSTDATA="${POSTDATA}&donotbackuprrd=yes"
+fi
 ### Encryption
 if [ ! -z "${ENCRYPTPASS}" ] ; then
 	logger -p user.info -t "${APPNAME}" -- "Encrypting backup"
@@ -275,7 +281,20 @@ else
 	echo "${WGET_OUT}"|logger -s -p user.debug -t "${APPNAME}" 
 	exit 1
 fi
-	
+
+if [ -z "${ENCRYPTPASS}" ] ; then
+        $(head -n1 ${BACKUPDIR}/${BACKUPFILE} | grep -q '<?xml version="1.0"?>')
+        IS_XMLFILE=$?
+        if [ ${IS_XMLFILE} -eq 0 ] ; then
+                logger -p user.debug -t "${APPNAME}" -- "Successfully checked downloaded pfSense(${PFSHOSTNAME}) config file."
+        else
+                clean_up
+		${DEBUG,,} || rm "${BACKUPDIR}/${BACKUPFILE}"
+                logger -p user.error -s -t "${APPNAME}" -- "Not correct xml pfSense(${PFSHOSTNAME}) config file."
+                exit 1
+        fi
+fi
+
 clean_up
 
 logger -p user.notice -t "${APPNAME}" -- "Successfully completed backup of ${PFSHOSTNAME}"
