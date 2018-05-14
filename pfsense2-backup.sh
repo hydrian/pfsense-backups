@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 ### Build: $Revision$
 ### Updated: $Date$
 
@@ -204,7 +204,6 @@ WGET_OUT=$(wget \
   --post-file "${TMPAUTHFILE}" \
   https://${PFSHOSTNAME}/index.php 2>&1  )
 LOGIN_RES=$?
-read WAIT
 ${DEBUG,,} || rm "${TMPAUTHFILE}"
 if [ ${LOGIN_RES} -eq 0 ] ; then 
 	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense(${PFSHOSTNAME})"
