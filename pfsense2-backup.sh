@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 ### Build: $Revision$
 ### Updated: $Date$
 
@@ -204,9 +204,16 @@ WGET_OUT=$(wget \
   --post-file "${TMPAUTHFILE}" \
   https://${PFSHOSTNAME}/index.php 2>&1  )
 LOGIN_RES=$?
+read WAIT
 ${DEBUG,,} || rm "${TMPAUTHFILE}"
 if [ ${LOGIN_RES} -eq 0 ] ; then 
 	logger -p user.debug -t "${APPNAME}" -- "Successfully logged in to pfSense(${PFSHOSTNAME})"
+	grep --quiet 'Username or Password incorrect' ${PAGE_OUTPUT}
+	if [ $? -eq 0 ] ; then
+	  logger -p user.error -s -t "${APPNAME}" -- "Login credentials are incorrect for pfSense(${PFSHOSTNAME})"
+	  clean_up
+	  exit 2 
+  fi
 else 
 	logger -p user.error -s -t "${APPNAME}" -- "Failed to logged in to pfSense(${PFSHOSTNAME})"
 	echo "${WGET_OUT}"|logger -s -p user.debug -t "${APPNAME}"
