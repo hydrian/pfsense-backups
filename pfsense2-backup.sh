@@ -195,6 +195,7 @@ echo -n "login=Login&usernamefld=${URL_USER}&passwordfld=${URL_PASS}&__csrf_magi
 PAGE_OUTPUT=$(mktemp)
 logger -p user.debug -t "${APPNAME}" -- "Submitting login credentials"
 WGET_OUT=$(wget \
+  --save-headers \
   --keep-session-cookies \
   --load-cookies ${COOKIEFILE} \
   --save-cookies ${COOKIEFILE} \
