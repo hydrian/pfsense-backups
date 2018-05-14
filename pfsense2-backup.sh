@@ -144,9 +144,9 @@ touch "${BACKUPDIR}/${BACKUPFILE}"
 chmod 600 "${BACKUPDIR}/${BACKUPFILE}"
 
 if [ "${IGNORE_UNTRUSTED_CERTIFICATES,,}" == "true" ] ; then
-	IGNORE_UNTRUSTED_CERTIFICAT_SET='--no-check-certificate'
+	IGNORE_UNTRUSTED_CERTIFICATE_SET='--no-check-certificate'
 else 
-	IGNORE_UNTRUSTED_CERTIFICAT_SET=''	 
+	IGNORE_UNTRUSTED_CERTIFICATE_SET=''	 
 fi
 
 ### Cookie Storage
@@ -159,7 +159,7 @@ logger -p user.debug -t "${APPNAME}" -- "Getting login page..."
 WGET_OUT=$(wget \
   --keep-session-cookies \
   --save-cookies "${COOKIEFILE}" \
-  ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
+  ${IGNORE_UNTRUSTED_CERTIFICATE_SET} \
   -O "${PAGE_OUTPUT}" \
   "https://${PFSHOSTNAME}/" 2>&1) 
 HTTP_CALL_RET=$?
@@ -199,7 +199,7 @@ WGET_OUT=$(wget \
   --keep-session-cookies \
   --load-cookies ${COOKIEFILE} \
   --save-cookies ${COOKIEFILE} \
-  ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
+  ${IGNORE_UNTRUSTED_CERTIFICATE_SET} \
   -O "${PAGE_OUTPUT}" \
   --post-file "${TMPAUTHFILE}" \
   https://${PFSHOSTNAME}/index.php 2>&1  )
@@ -267,7 +267,7 @@ WGET_OUT=$(wget \
   --keep-session-cookies \
   --load-cookies ${COOKIEFILE} \
   --save-cookies ${COOKIEFILE} \
-  ${IGNORE_UNTRUSTED_CERTIFICAT_SET} \
+  ${IGNORE_UNTRUSTED_CERTIFICATE_SET} \
   -O "${BACKUPDIR}/${BACKUPFILE}" \
   --post-file="${POSTDATA_FILE}" \
   "https://${PFSHOSTNAME}/diag_backup.php" 2>&1) 
